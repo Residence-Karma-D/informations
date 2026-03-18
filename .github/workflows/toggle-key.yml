@@ -19,6 +19,8 @@ on:
           - 'true'
           - 'false'
 
+run-name: Toggle Key ${{ github.event.inputs.key }} → active=${{ github.event.inputs.active }}
+
 permissions:
   contents: write
 
@@ -26,7 +28,7 @@ jobs:
   toggle:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Toggle key in data file
         run: |
@@ -35,7 +37,7 @@ jobs:
           ACTIVE="${{ github.event.inputs.active }}"
 
           # Validate inputs
-          if [[ ! "$KEY" =~ ^D1(03|06|10)$ ]]; then
+          if [[ ! "$KEY" =~ ^D(103|106|110)$ ]]; then
             echo "::error::Invalid key: $KEY"
             exit 1
           fi
@@ -53,5 +55,5 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add src/data/keys.json
           git diff --cached --quiet && echo "No changes" && exit 0
-          git commit -m "Toggle ${{ github.event.inputs.key }} → active=${{ github.event.inputs.active }}"
+          git commit -m "Toggle Key ${{ github.event.inputs.key }} → active=${{ github.event.inputs.active }}"
           git push

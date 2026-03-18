@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  workflow_run:
+    workflows: ["Toggle Key"]
+    types: [completed]
 
 permissions:
   contents: read
@@ -16,13 +19,22 @@ concurrency:
 
 jobs:
   build:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+        if: ${{ github.event_name == 'workflow_run' }}
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
 
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v6
+        if: ${{ github.event_name != 'workflow_run' }}
+        with:
+          ref: ${{ github.sha }}
 
-      - uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@v5
+
+      - uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: pnpm
@@ -31,7 +43,7 @@ jobs:
 
       - run: pnpm build
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v4
         with:
           path: dist
 
