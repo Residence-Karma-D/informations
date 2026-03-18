@@ -1,0 +1,314 @@
+---
+import Layout from "../layouts/Layout.astro";
+import keysData from "../data/keys.json";
+
+const keys = Object.entries(keysData) as [
+  string,
+  { active: boolean; label: string },
+][];
+---
+
+<Layout>
+  <main>
+    <div class="card">
+      <h1>Administration</h1>
+      <p class="subtitle">Gestion des places de parking</p>
+
+      <div class="setup" id="setup">
+        <label for="repo">Dépôt GitHub <small>(owner/repo)</small></label>
+        <input type="text" id="repo" placeholder="user/residence-karma-d" />
+        <label for="token">Token GitHub (PAT)</label>
+        <input type="password" id="token" placeholder="ghp_..." />
+        <button class="btn-save" id="save-config">Enregistrer</button>
+        <p class="hint">
+          Le token nécessite le droit <code>repo</code> ou <code
+            >actions:write</code
+          >. Il est stocké uniquement dans votre navigateur.
+        </p>
+      </div>
+
+      <div class="keys">
+        {
+          keys.map(([id, key]) => (
+            <button
+              class={`key-btn ${key.active ? "active" : ""}`}
+              data-key={id}
+            >
+              <span class="key-id">{id}</span>
+              <span class="key-status">
+                {key.active ? "Actif" : "Inactif"}
+              </span>
+            </button>
+          ))
+        }
+      </div>
+
+      <div id="feedback" class="feedback"></div>
+
+      <a href="./" class="back-link">&larr; Retour à l'accueil</a>
+    </div>
+  </main>
+</Layout>
+
+<script>
+  const STORAGE_KEY_REPO = "karma-admin-repo";
+  const STORAGE_KEY_TOKEN = "karma-admin-token";
+
+  function getConfig() {
+    return {
+      repo: localStorage.getItem(STORAGE_KEY_REPO) || "",
+      token: localStorage.getItem(STORAGE_KEY_TOKEN) || "",
+    };
+  }
+
+  // Restore saved config
+  const repoInput = document.getElementById("repo") as HTMLInputElement;
+  const tokenInput = document.getElementById("token") as HTMLInputElement;
+  const config = getConfig();
+  if (config.repo) repoInput.value = config.repo;
+  if (config.token) tokenInput.value = config.token;
+
+  document.getElementById("save-config")?.addEventListener("click", () => {
+    localStorage.setItem(STORAGE_KEY_REPO, repoInput.value.trim());
+    localStorage.setItem(STORAGE_KEY_TOKEN, tokenInput.value.trim());
+    showFeedback("Configuration enregistrée.", "success");
+  });
+
+  function showFeedback(message: string, type: "success" | "error" | "info") {
+    const el = document.getElementById("feedback")!;
+    el.textContent = message;
+    el.className = `feedback ${type}`;
+    setTimeout(() => {
+      el.textContent = "";
+      el.className = "feedback";
+    }, 5000);
+  }
+
+  document.querySelectorAll(".key-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const keyId = (btn as HTMLElement).dataset.key;
+      const { repo, token } = getConfig();
+
+      if (!repo || !token) {
+        showFeedback(
+          "Veuillez configurer le dépôt et le token ci-dessus.",
+          "error",
+        );
+        return;
+      }
+
+      const isActive = btn.classList.contains("active");
+      const newState = !isActive;
+
+      try {
+        (btn as HTMLButtonElement).disabled = true;
+        showFeedback(`Basculement de ${keyId}…`, "info");
+
+        const resp = await fetch(
+          `https://api.github.com/repos/${repo}/actions/workflows/toggle-key.yml/dispatches`,
+          {
+            method: "POST",
+            headers: {
+              Accept: "application/vnd.github.v3+json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              ref: "main",
+              inputs: { key: keyId!, active: String(newState) },
+            }),
+          },
+        );
+
+        if (resp.status === 204) {
+          btn.classList.toggle("active");
+          const statusEl = btn.querySelector(".key-status")!;
+          statusEl.textContent = newState ? "Actif" : "Inactif";
+          showFeedback(
+            `${keyId} → ${newState ? "Actif" : "Inactif"}. Le site sera redéployé sous peu.`,
+            "success",
+          );
+        } else {
+          const body = await resp.text();
+          showFeedback(`Erreur ${resp.status}: ${body}`, "error");
+        }
+      } catch (e: any) {
+        showFeedback(`Erreur réseau : ${e.message}`, "error");
+      } finally {
+        (btn as HTMLButtonElement).disabled = false;
+      }
+    });
+  });
+</script>
+
+<style>
+  main {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 2rem;
+    background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+    font-family:
+      "Segoe UI",
+      system-ui,
+      -apple-system,
+      sans-serif;
+    color: #e0e0e0;
+  }
+
+  .card {
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 1.5rem;
+    padding: 3rem;
+    max-width: 540px;
+    width: 100%;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  }
+
+  h1 {
+    margin: 0 0 0.25rem;
+    font-size: 1.8rem;
+    background: linear-gradient(90deg, #a78bfa, #60a5fa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .subtitle {
+    color: #94a3b8;
+    margin: 0 0 1.5rem;
+  }
+
+  .setup {
+    margin-bottom: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .setup label {
+    font-size: 0.85rem;
+    color: #94a3b8;
+  }
+
+  .setup input {
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.05);
+    color: #e0e0e0;
+    font-size: 0.95rem;
+  }
+
+  .setup input:focus {
+    outline: none;
+    border-color: #60a5fa;
+  }
+
+  .btn-save {
+    align-self: flex-start;
+    padding: 0.5rem 1.25rem;
+    border: none;
+    border-radius: 0.5rem;
+    background: #60a5fa;
+    color: #0f0c29;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 0.25rem;
+  }
+
+  .btn-save:hover {
+    background: #93c5fd;
+  }
+
+  .hint {
+    font-size: 0.78rem;
+    color: #64748b;
+    margin: 0;
+  }
+
+  .hint code {
+    background: rgba(255, 255, 255, 0.08);
+    padding: 0.1rem 0.3rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+  }
+
+  .keys {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .key-btn {
+    flex: 1;
+    padding: 1.25rem 1rem;
+    border-radius: 1rem;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.04);
+    color: #94a3b8;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.25s ease;
+  }
+
+  .key-btn:hover {
+    border-color: rgba(167, 139, 250, 0.4);
+    background: rgba(167, 139, 250, 0.08);
+  }
+
+  .key-btn.active {
+    border-color: #22c55e;
+    background: rgba(34, 197, 94, 0.12);
+    color: #86efac;
+  }
+
+  .key-btn:disabled {
+    opacity: 0.5;
+    cursor: wait;
+  }
+
+  .key-id {
+    font-size: 1.4rem;
+    font-weight: 700;
+  }
+
+  .key-status {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .feedback {
+    min-height: 1.5rem;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+    border-radius: 0.5rem;
+    padding: 0 0.75rem;
+  }
+
+  .feedback.success {
+    color: #86efac;
+  }
+  .feedback.error {
+    color: #fca5a5;
+  }
+  .feedback.info {
+    color: #93c5fd;
+  }
+
+  .back-link {
+    color: #60a5fa;
+    text-decoration: none;
+    font-size: 0.9rem;
+  }
+
+  .back-link:hover {
+    text-decoration: underline;
+  }
+</style>

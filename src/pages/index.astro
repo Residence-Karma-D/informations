@@ -1,0 +1,135 @@
+---
+import keysData from "../data/keys.json";
+import Layout from "../layouts/Layout.astro";
+
+const activeKeys = Object.entries(keysData).filter(([_, key]) => key.active);
+---
+
+<Layout>
+  <main>
+    <div class="card">
+      <h1>Résidence KARMA D</h1>
+      <p class="welcome">Bienvenue&nbsp;!</p>
+      <article>
+        <p>
+          Pour récupérer les clés des stops parking, merci de contacter le CS.
+        </p>
+        <p>
+          Les clés sont fournies uniquement sur présentation d'une carte
+          d'invalidité (CMI) en cours de validité.
+        </p>
+        <p>Toute clé perdue sera facturée par le syndic sur vos charges.</p>
+        {
+          activeKeys.length > 0 && (
+            <section class="active-keys">
+              <p>Les clés sont disponibles&nbsp;:</p>
+              <ul>
+                {activeKeys.map(([id, key]) => (
+                  <li class="key-badge">
+                    <strong>{id}</strong>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )
+        }
+      </article>
+    </div>
+  </main>
+</Layout>
+
+<style>
+  main {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 2rem;
+    background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+    font-family:
+      "Segoe UI",
+      system-ui,
+      -apple-system,
+      sans-serif;
+    color: #e0e0e0;
+  }
+
+  .card {
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 1.5rem;
+    padding: 3rem;
+    max-width: 640px;
+    width: 100%;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  }
+
+  h1 {
+    margin: 0 0 0.25rem;
+    font-size: 2rem;
+    background: linear-gradient(90deg, #a78bfa, #60a5fa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .welcome {
+    font-size: 1.15rem;
+    color: #94a3b8;
+    margin: 0 0 1.5rem;
+  }
+
+  article p {
+    margin: 0.75rem 0;
+    line-height: 1.7;
+    color: #cbd5e1;
+    font-size: 1rem;
+  }
+
+  article p:nth-child(2) {
+    padding: 0.75rem 1rem;
+    background: rgba(250, 204, 21, 0.08);
+    border-left: 3px solid #facc15;
+    border-radius: 0.5rem;
+    color: #fde68a;
+  }
+
+  article p:last-child {
+    color: #f87171;
+    font-size: 0.9rem;
+  }
+
+  .active-keys {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .active-keys h2 {
+    font-size: 1.2rem;
+    color: #a78bfa;
+    margin: 0 0 1rem;
+  }
+
+  .active-keys ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .key-badge {
+    padding: 0.75rem 1rem;
+    background: rgba(96, 165, 250, 0.1);
+    border: 1px solid rgba(96, 165, 250, 0.2);
+    border-radius: 0.75rem;
+    color: #93c5fd;
+  }
+
+  .key-badge strong {
+    color: #60a5fa;
+  }
+</style>
